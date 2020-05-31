@@ -24,8 +24,8 @@ class Point
     }
     public void Draw()
     {
-        Console.SetCursorPosition(x, y);
-        Console.Write(sym);
+            Console.SetCursorPosition(x, y);
+            Console.Write(sym);
     }
     public void Move(int offset, Direction direction)
     {
@@ -37,7 +37,6 @@ class Point
             y = y - offset;
         else if (direction == Direction.DOWN)
             y = y + offset;
-
     }
     public void Clear()
     {
@@ -76,25 +75,66 @@ class VerticaleLine : Figure
 class Figure
 {
     protected List<Point> pList;
-    public void Drow()
+    public void Draw()
     {
-        foreach(Point p in pList) { p.Draw(); }
+        foreach (Point p in pList)
+            p.Draw();
+    }
+    internal bool IsHit(Figure figure)
+    {
+        foreach (var p in pList)
+        {
+            if (figure.IsHit(p))
+                return true;
+        }
+        return false;
+    }
+    private bool IsHit(Point point)
+    {
+        foreach (var p in pList)
+        {
+            if (p.IsHit(point))
+                return true;
+        }
+        return false;
     }
 }
-class Square : Figure
+class Walls
 {
-    public Square(int xUpLeft, int yUpLeft, int xDownRight,int yDownRight, char Sym)
+    List<Figure> wallList;
+
+    public Walls(int mapWidth, int mapHeight)
     {
-        pList = new List<Point>();
-        for (int x = xUpLeft; x <= xDownRight; x++)
+        wallList = new List<Figure>();
+
+        HorizontalLine upLine = new HorizontalLine(0, 78, 0, '░');
+        HorizontalLine downLine = new HorizontalLine(0, 78, 34, '░');
+        VerticaleLine leftLine = new VerticaleLine(0, 0, 34, '░');
+        VerticaleLine rightLine = new VerticaleLine(78, 0, 34, '░');
+
+        wallList.Add(upLine);
+        wallList.Add(downLine);
+        wallList.Add(leftLine);
+        wallList.Add(rightLine);
+    }
+
+    internal bool IsHit(Figure figure)
+    {
+        foreach (var wall in wallList)
         {
-            pList.Add(new Point(x, yUpLeft, Sym));
-            pList.Add(new Point(x, yDownRight, Sym));
+            if (wall.IsHit(figure))
+            {
+                return true;
+            }
         }
-        for (int y = yUpLeft;y <= yDownRight; y++)
+        return false;
+    }
+
+    public void Draw()
+    {
+        foreach (var wall in wallList)
         {
-            pList.Add(new Point(xUpLeft, y, Sym));
-            pList.Add(new Point(xDownRight, y, Sym));
+            wall.Draw();
         }
     }
 }
@@ -120,10 +160,10 @@ class Snake : Figure
     }
     public void HandleKey(ConsoleKey key)
     {
-        if (key == ConsoleKey.LeftArrow) direction = Direction.LEFT;
-        else if (key == ConsoleKey.RightArrow) direction = Direction.RIGHT;
-        else if (key == ConsoleKey.UpArrow) direction = Direction.UP;
-        else if (key == ConsoleKey.DownArrow) direction = Direction.DOWN;
+        if (key == ConsoleKey.LeftArrow && direction != Direction.RIGHT) direction = Direction.LEFT;
+        else if (key == ConsoleKey.RightArrow && direction != Direction.LEFT) direction = Direction.RIGHT;
+        else if (key == ConsoleKey.UpArrow && direction != Direction.DOWN) direction = Direction.UP;
+        else if (key == ConsoleKey.DownArrow && direction != Direction.UP) direction = Direction.DOWN;
     }
     internal void Move()
     {
@@ -156,7 +196,6 @@ class Snake : Figure
         }
         else return false;
     }
-    
 }
 class FoodCreator
 {
@@ -177,25 +216,82 @@ class FoodCreator
         return (new Point(x, y, sym));
     }
 }
+class Barrier
+{
+    Random rnd = new Random();
+    List<Figure> figures;
+    public Barrier(int mapWidht, int mapHeight)
+    {
+        figures = new List<Figure>();
+        int k = rnd.Next(5, 10);
+        for (int i = 0; i < k; i++)
+        {
+            int x = rnd.Next(10, mapWidht - 10);
+            int y1 = rnd.Next(10, mapHeight - 10);
+            int y2 = rnd.Next(10, mapHeight - 10);
+            VerticaleLine randomVLine = new VerticaleLine(x, y1, y2, '░');
+            figures.Add(randomVLine);
+        }
+    }
+    internal bool IsHit(Figure figure)
+    {
+        foreach (var f in figures)
+        {
+            if (f.IsHit(figure))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    public void Draw()
+    {
+        foreach (var f in figures)
+        {
+            f.Draw();
+        }
+    }
+
+}
 class Program
 {
     static void Main()
     {
-        Console.SetBufferSize(80, 40);
-
-        Square sq = new Square(0, 0, 78, 34, '#');
-        sq.Drow();
-        Point p = new Point(4, 5, '*');
-        Snake snake = new Snake(p, 2, Direction.RIGHT);
-        snake.Drow();
+        Console.SetBufferSize(80, 35);
+        Console.SetWindowSize(80, 35);
+        Thread.Sleep(3000);
+        string start = "Игра начнется через: ";
+        Console.WriteLine(start);
+        Thread.Sleep(1000);
+        Console.Write("...3");
+        Thread.Sleep(1000);
+        Console.Write("...2");
+        Thread.Sleep(1000);
+        Console.Write("...1");
+        Thread.Sleep(1000);
+        Console.Clear();
+        Walls walls = new Walls(80, 35);
+        walls.Draw();
+        Barrier barrier = new Barrier(80, 35);
+        barrier.Draw();
+        Point p = new Point(30, 20, '*');
+        Snake snake = new Snake(p, 2, Direction.LEFT);
+        snake.Draw();
         FoodCreator foodCreator = new FoodCreator(80, 35, '$');
         Point food = foodCreator.CreateFood();
         food.Draw();
         while (true)
         {
+            if (walls.IsHit(snake) || barrier.IsHit(snake))
+            {
+                Console.Clear();
+                Console.WriteLine("Игра окончена.\n\nНажмите Enter, чтобы выйти...");
+                Console.ReadLine();
+                break;
+            }
             if (snake.Eat(food))
             {
-                snake.Drow();
+                snake.Draw();
                 food = foodCreator.CreateFood();
                 food.Draw();
             }
