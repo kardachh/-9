@@ -290,7 +290,7 @@ class Program
                 break;
             }
             if (snake.Eat(food))
-            {
+            { 
                 snake.Draw();
                 food = foodCreator.CreateFood();
                 food.Draw();
